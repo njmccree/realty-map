@@ -1,0 +1,5 @@
+MLS #,Status,Address,City,Zip Code,List Price,Sold Price,Close Date,Beds,Baths Full,Baths Half,Square Feet,Lot Acres,Year Built,Garage Spaces,Basement
+A1,Active,"101 Main St",Bay City,48706,"$199,900",,,3,1,1,"1,450",0.25,1955,2,"Full, Finished"
+A2,Closed,"202 Elm St",Essexville,48732,215000,210000,03/15/2026,4,2,0,1800,0.5,1978,0,None
+A3,Active,"303 Oak St",Midland,48640,300000,,,3,2,0,1700,,1990,2,Partial
+A4,Pending,"404 Pine St",Kawkawlin,48631,159000,,,2,1,0,950,,1940,,Unfinished

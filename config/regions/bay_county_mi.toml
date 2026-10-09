@@ -1,0 +1,72 @@
+# Region definition: Bay County, Michigan.
+#
+# Every data source is filtered down to the geographies listed here. To track
+# another area, copy this file, change the values, and pass `--region <id>`
+# (or set REALTYMAP_REGION).
+
+id = "bay_county_mi"
+name = "Bay County, MI"
+state = "MI"
+state_fips = "26"
+county_fips = "017"          # full county FIPS = state_fips + county_fips = 26017
+redfin_county_name = "Bay County, MI"
+
+# Map view defaults
+center = [43.66, -83.95]
+zoom = 10
+
+# ZIP codes whose population is mostly inside Bay County. Lat/lon are
+# approximate ZIP centroids used only to place markers on the map.
+[[zips]]
+zip = "48706"
+name = "Bay City (west / Bangor Twp)"
+lat = 43.608
+lon = -83.953
+
+[[zips]]
+zip = "48708"
+name = "Bay City (east / south)"
+lat = 43.560
+lon = -83.850
+
+[[zips]]
+zip = "48732"
+name = "Essexville / Hampton Twp"
+lat = 43.610
+lon = -83.810
+
+[[zips]]
+zip = "48611"
+name = "Auburn"
+lat = 43.603
+lon = -84.070
+
+[[zips]]
+zip = "48631"
+name = "Kawkawlin"
+lat = 43.660
+lon = -83.990
+
+[[zips]]
+zip = "48634"
+name = "Linwood"
+lat = 43.740
+lon = -84.010
+
+[[zips]]
+zip = "48650"
+name = "Pinconning"
+lat = 43.850
+lon = -84.000
+
+[[zips]]
+zip = "48613"
+name = "Bentley"
+lat = 43.940
+lon = -84.130
+
+[[zips]]
+zip = "48747"
+name = "Munger"
+lat = 43.520
+lon = -83.760

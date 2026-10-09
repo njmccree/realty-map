@@ -1,0 +1,6 @@
+month_date_yyyymm,postal_code,zip_name,median_listing_price,median_listing_price_mm,median_listing_price_yy,active_listing_count,average_listing_price,median_square_feet,quality_flag
+202609,48706,"bay city, mi",245325.0,-0.08,-0.09,103,300117.0,1599,0
+202609,57218,"brandt, sd",308725.0,0.02,-0.35,2,317450.0,2725,1
+202509,48706,"bay city, mi",250000.0,,,80,290000.0,1550,0
+202609,8706,"somewhere, nj",1.0,,,1,1.0,1,0
+"Note: data is provided as-is"

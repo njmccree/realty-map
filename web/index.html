@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Realty Map</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <div>
+        <h1>Realty Map</h1>
+        <p class="sub" id="region-name">Loading…</p>
+      </div>
+      <label class="control">
+        <span>Area</span>
+        <select id="zip-select"><option value="">Whole county</option></select>
+      </label>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="demo-banner" class="banner" hidden>
+      Showing <strong>synthetic demo listings</strong> alongside real market data. Listing-level numbers
+      (amenities, price by bedroom, the map pins) are not real homes. Remove them with
+      <code>python -m realtymap clear --source demo</code>.
+    </div>
+
+    <section>
+      <h2>Market snapshot <span class="muted" id="snapshot-geo"></span></h2>
+      <div class="tiles" id="tiles"></div>
+      <p class="note" id="tiles-empty" hidden>No market data yet. Run <code>python -m realtymap ingest</code>.</p>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Price trends</h2>
+        <div class="segmented" id="range">
+          <button data-months="12">1Y</button>
+          <button data-months="36" class="on">3Y</button>
+          <button data-months="60">5Y</button>
+          <button data-months="0">All</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="legend" id="price-legend"></div>
+        <div class="chart-box"><canvas id="price-chart" aria-label="Home price trends"></canvas></div>
+        <p class="note">List prices (Realtor.com) are homes on the market; sale prices (Redfin) are closed sales;
+          ZHVI (Zillow) estimates the typical value of all homes. Redfin sale data is county-level unless
+          ingested with <code>--redfin-zips</code>.</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Change over time</h3>
+          <div class="table-scroll"><table id="change-table"></table></div>
+        </div>
+        <div class="card">
+          <div class="section-head">
+            <h3 id="activity-title">Market activity</h3>
+            <select id="activity-metric"></select>
+          </div>
+          <div class="chart-box small"><canvas id="activity-chart" aria-label="Market activity"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>Homes &amp; amenities</h2>
+        <div class="segmented" id="status">
+          <button data-status="" class="on">All</button>
+          <button data-status="active">For sale</button>
+          <button data-status="sold">Sold</button>
+        </div>
+      </div>
+      <p class="note" id="amenity-empty" hidden>
+        No individual listings yet. Amenity averages and price-vs-amenity comparisons need listing-level
+        data: set <code>RENTCAST_API_KEY</code> and run <code>python -m realtymap ingest rentcast</code>,
+        or import an MLS / assessor export with <code>python -m realtymap import file.csv</code>.
+        The housing-stock column below comes from the Census and is available without listings.
+      </p>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Average home <span class="muted" id="amenity-count"></span></h3>
+          <div class="table-scroll"><table id="amenity-table"></table></div>
+        </div>
+        <div class="card">
+          <h3>Price by bedrooms</h3>
+          <div class="chart-box small"><canvas id="bed-chart" aria-label="Median price by bedroom count"></canvas></div>
+          <p class="note" id="bed-empty" hidden>Not enough listings with bedroom counts.</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>What amenities are worth</h3>
+          <p class="note">Median price of homes with vs. without each feature. Raw comparisons mix in size
+            and location, so read alongside the model.</p>
+          <div class="table-scroll"><table id="premium-table"></table></div>
+        </div>
+        <div class="card">
+          <h3>Price model</h3>
+          <p class="note">Linear regression of price on amenities: each row is the estimated price
+            difference for one more unit, holding the others fixed. ± is one standard error.</p>
+          <div class="table-scroll"><table id="model-table"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Map &amp; ZIP comparison</h2>
+      <div class="card map-card">
+        <div id="map"></div>
+        <div class="map-legend" id="map-legend"></div>
+      </div>
+      <div class="card">
+        <div class="table-scroll"><table id="zip-table" class="sortable"></table></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Listings <span class="muted" id="listing-count"></span></h2>
+      <div class="card">
+        <div class="table-scroll tall"><table id="listing-table"></table></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Data sources</h2>
+      <div class="card"><div class="table-scroll"><table id="source-table"></table></div></div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
