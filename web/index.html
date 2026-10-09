@@ -14,10 +14,17 @@
         <h1>Realty Map</h1>
         <p class="sub" id="region-name">Loading…</p>
       </div>
-      <label class="control">
-        <span>Area</span>
-        <select id="zip-select"><option value="">Whole county</option></select>
-      </label>
+      <div class="topbar-controls">
+        <div class="search">
+          <input id="home-search" type="search" placeholder="Find a home by address" autocomplete="off"
+                 aria-label="Find a home by address">
+          <ul id="search-results" class="search-results" hidden></ul>
+        </div>
+        <label class="control">
+          <span>Area</span>
+          <select id="zip-select"><option value="">Whole county</option></select>
+        </label>
+      </div>
     </div>
   </header>
 
@@ -120,6 +127,23 @@
     </section>
 
     <section>
+      <div class="section-head">
+        <h2>Recent sales <span class="muted" id="sales-count"></span></h2>
+        <div class="segmented" id="sales-range">
+          <button data-months="12">1Y</button>
+          <button data-months="24" class="on">2Y</button>
+          <button data-months="60">5Y</button>
+          <button data-months="0">All</button>
+        </div>
+      </div>
+      <div class="card">
+        <p class="note">Closed sales of individual homes, with each home's previous sale. Click a row for the
+          home's full history.</p>
+        <div class="table-scroll tall"><table id="sales-table"></table></div>
+      </div>
+    </section>
+
+    <section>
       <h2>Listings <span class="muted" id="listing-count"></span></h2>
       <div class="card">
         <div class="table-scroll tall"><table id="listing-table"></table></div>
@@ -132,8 +156,21 @@
     </section>
   </main>
 
+  <div id="home-backdrop" class="backdrop" hidden></div>
+  <aside id="home-panel" class="drawer" hidden aria-labelledby="home-title" role="dialog" aria-modal="true">
+    <div class="drawer-head">
+      <div>
+        <h2 id="home-title">Home</h2>
+        <p class="sub" id="home-subtitle"></p>
+      </div>
+      <button id="home-close" class="icon-button" aria-label="Close">✕</button>
+    </div>
+    <div id="home-body" class="drawer-body"></div>
+  </aside>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="/static/home.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

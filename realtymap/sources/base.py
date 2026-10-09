@@ -34,6 +34,9 @@ class Source(ABC):
     homepage: str = ""
     #: environment variable holding an API key, if one is required
     api_key_env: str | None = None
+    #: True when one run returns *every* current listing, so listings that are
+    #: missing from a run can be marked off-market
+    full_snapshot: bool = False
 
     def api_key(self) -> str:
         if not self.api_key_env:

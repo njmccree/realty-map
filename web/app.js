@@ -327,19 +327,21 @@ async function renderListings() {
   $("#listing-table").innerHTML = rows.length ? `<thead><tr><th>Address</th><th>ZIP</th><th>Status</th><th class="num">Price</th>
       <th class="num">Beds</th><th class="num">Baths</th><th class="num">Sq ft</th><th class="num">$/sq ft</th><th class="num">Built</th>
       <th>Garage</th><th>Basement</th><th>Source</th></tr></thead>
-    <tbody>${rows.map((r) => `<tr><td>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.address)}</a>` : esc(r.address)}</td>
+    <tbody>${rows.map((r) => `<tr${r.property_id ? ` class="clickable" data-home="${r.property_id}"` : ""}><td>${r.url ? `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.address)}</a>` : esc(r.address)}</td>
       <td>${esc(r.zip)}</td><td>${esc(r.status)}</td><td class="num">${fmt.money(r.price)}</td>
       <td class="num">${fmt.num(r.bedrooms)}</td><td class="num">${fmt.num(r.bathrooms, 1)}</td><td class="num">${fmt.num(r.sqft)}</td>
       <td class="num">${r.sqft ? fmt.money(r.price / r.sqft) : "—"}</td><td class="num">${r.year_built ?? "—"}</td>
       <td>${yn(r.garage)}${r.garage_spaces ? ` (${fmt.num(r.garage_spaces)})` : ""}</td>
       <td>${yn(r.basement)}${r.basement_finished ? " (finished)" : ""}</td><td>${esc(r.source)}</td></tr>`).join("")}</tbody>`
     : "<tbody><tr><td class='muted'>No listings for this selection.</td></tr></tbody>";
+  bindHomeRows($("#listing-table"));
 
   state.layers.listings.clearLayers();
   for (const r of rows) {
     if (r.lat == null || r.lon == null) continue;
     L.circleMarker([r.lat, r.lon], { radius: 4, weight: 1, color: css("--surface"), fillColor: css("--series-2"), fillOpacity: 0.9 })
       .bindTooltip(`${esc(r.address)}<br>${fmt.money(r.price)} · ${fmt.num(r.bedrooms)} bd / ${fmt.num(r.bathrooms, 1)} ba · ${fmt.num(r.sqft)} sq ft`)
+      .on("click", () => openHome(r.property_id))
       .addTo(state.layers.listings);
   }
 }
@@ -367,6 +369,7 @@ async function refresh() {
     renderTrends(),
     renderAmenities(),
     renderListings(),
+    renderSales(),
   ];
   const results = await Promise.allSettled(tasks);
   results.filter((r) => r.status === "rejected").forEach((r) => console.error(r.reason));
@@ -400,6 +403,7 @@ async function main() {
   segmented($("#status"), "status", (s) => { state.status = s; renderAmenities(); renderListings(); });
   $("#activity-metric").addEventListener("change", renderActivity);
   renderSources();
+  initHomes();
   initMap();
   await Promise.all([refresh(), renderZips()]);
 }

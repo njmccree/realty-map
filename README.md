@@ -10,6 +10,9 @@ place and shows, for an area and each of its ZIP codes:
 - **Trends**: list prices, closed-sale prices and home values over 1–5+ years, with 3-month,
   1-year, 3-year and 5-year changes
 - A **map and ZIP-by-ZIP comparison table**
+- **Individual homes**: search by address and open any home to see its details, every listing,
+  price change and sale on a timeline, how much it gained between sales compared with the area,
+  tax assessments, comparable recent sales nearby, and three rough value estimates
 
 The first configured region is **Bay County, Michigan** (county FIPS 26017) and its ZIP codes
 48706, 48708, 48732, 48611, 48631, 48634, 48650, 48613 and 48747.
@@ -65,6 +68,34 @@ not "no". Re-importing the same file updates rows instead of duplicating them. C
 headers are in [`samples/listings_template.csv`](samples/listings_template.csv); the full
 alias list is in `realtymap/sources/csv_import.py`.
 
+## Individual homes and past sales
+
+Every listing or sale is matched to a **home** by its street address and ZIP ("1205 N. Johnson
+Street" and "1205 North Johnson St" are the same home), so the same house reported by several
+sources, or sold several times, has one history. Find a home with the search box at the top, or click
+any row in **Recent sales** or **Listings**, or a pin on the map. Each home's page has its own link
+(`/#home=<id>`) you can bookmark or share.
+
+A home's page shows:
+
+- **Details**: beds, baths, size, lot, year built, garage, basement
+- **Price history chart and timeline**: listed, price changes, under contract, sold, taken off market
+- **Sale history**: each sale with the change since the previous one, per year, next to the area's
+  change over the same years
+- **Tax assessments**, when a property-record source supplies them
+- **Comparable recent sales**: sold in the last 2 years within 3 miles, within one bedroom and 30% of
+  the size
+- **Value estimates**: last sale price moved by the area trend since then; comparable sales' median
+  $/sq ft times this home's size; and the price model. These are rough guides, not appraisals.
+
+Where the history comes from:
+
+| Source | How |
+|---|---|
+| CSV of past sales | `python -m realtymap import sold.csv`. One row per sale; several rows for the same address become that home's sale history. Include `Sold Price` and `Close Date` (plus `List Price` / `List Date` if you have them). MLS "sold" exports and county sales lists work well. |
+| RentCast property records | With `RENTCAST_API_KEY` set, a home's page has a **Fetch sale history** button (1 API request), or run `python -m realtymap lookup "1 Main St, Bay City, MI 48706"`. `ingest rentcast --enrich N` does it for the first N listings. Owner names in these records are not stored. |
+| Listings over time | Each RentCast ingest records new listings and price changes. Listings that disappear from a later ingest are marked **off market**, so homes that sold or were withdrawn stop counting as for sale. |
+
 ## Reading the numbers
 
 - **List price vs. sale price vs. home value** measure different things: what sellers ask for
@@ -91,6 +122,10 @@ database file (`REALTYMAP_DB=data/other.sqlite3`).
 | `GET /api/trends?metric=median_listing_price&metric=zhvi&zip=` | time series + change summary |
 | `GET /api/amenities?zip=&status=active\|sold` | amenity averages, price by bedrooms, premiums, model |
 | `GET /api/zips` | per-ZIP comparison |
+| `GET /api/homes?q=` | search homes by address |
+| `GET /api/homes/{id}` | one home: details, timeline, sale history, comparables, value estimates |
+| `POST /api/homes/{id}/lookup` | fetch the home's property record from RentCast (1 API request) |
+| `GET /api/sales?zip=&months=` | recent closed sales, each with the home's previous sale |
 | `GET /api/listings?zip=&status=&limit=` | individual homes |
 
 Omit `zip` for the whole county.
@@ -103,5 +138,7 @@ python -m pytest
 ```
 
 Layout: `realtymap/sources/` (one module per source), `realtymap/analytics.py` (metrics, trends,
-regression), `realtymap/api.py` (FastAPI), `web/` (static UI, Chart.js + Leaflet), data in SQLite at
-`data/realtymap.sqlite3`.
+regression), `realtymap/properties.py` (matching listings to homes, recording history),
+`realtymap/homes.py` (home detail, sale history, comparables), `realtymap/api.py` (FastAPI), `web/`
+(static UI, Chart.js + Leaflet), data in SQLite at `data/realtymap.sqlite3`. Databases from earlier
+versions are upgraded automatically the first time they are opened.

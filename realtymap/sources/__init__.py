@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from itertools import islice
 
-from .. import db
+from .. import db, properties
 from ..config import Region
 from .base import Source, SourceUnavailable
 from .census import CensusACS
@@ -40,6 +40,7 @@ BATCH = 5000
 def run_source(conn: sqlite3.Connection, source: Source, region: Region) -> int:
     """Run one source and store its output. Returns the number of rows written."""
     run_id = db.start_run(conn, source.name if not isinstance(source, CSVImport) else source.source_name)
+    started = conn.execute("SELECT started FROM ingest_runs WHERE id = ?", (run_id,)).fetchone()[0]
     total = 0
     try:
         it = iter(source.fetch(region))
@@ -56,7 +57,12 @@ def run_source(conn: sqlite3.Connection, source: Source, region: Region) -> int:
     except Exception as exc:
         db.finish_run(conn, run_id, "error", total, f"{type(exc).__name__}: {exc}")
         raise
-    db.finish_run(conn, run_id, "ok", total)
+    message = ""
+    if source.full_snapshot:
+        with db.transaction(conn):
+            gone = properties.mark_off_market(conn, source.name, started)
+        message = f"{gone} listings went off market"
+    db.finish_run(conn, run_id, "ok", total, message)
     return total
 
 

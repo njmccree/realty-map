@@ -9,7 +9,9 @@ from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import analytics, db
+import os
+
+from . import analytics, db, homes, properties
 from .config import ROOT, load_region
 from .sources import SOURCE_INFO
 
@@ -49,6 +51,7 @@ def get_region(conn: sqlite3.Connection = Depends(get_conn)):
         "sources": SOURCE_INFO,
         "source_status": analytics.source_status(conn),
         "demo_listings": demo,
+        "lookup_enabled": bool(os.environ.get("RENTCAST_API_KEY", "").strip()),
         "series": {k: {"source": s, "label": label, "is_price": k in analytics.PRICE_UNITS}
                    for k, (s, _, label) in analytics.SERIES.items()},
     }
@@ -83,6 +86,50 @@ def get_amenities(zip: str | None = None, status: str | None = Status,
 def get_listings(zip: str | None = None, status: str | None = Status,
                  limit: int = Query(500, le=5000), conn: sqlite3.Connection = Depends(get_conn)):
     return analytics.listings(conn, region, _zip(zip), status, limit)
+
+
+@app.get("/api/homes")
+def search_homes(q: str = Query(..., min_length=2, max_length=100), conn: sqlite3.Connection = Depends(get_conn)):
+    return homes.search(conn, region, q)
+
+
+@app.get("/api/homes/{property_id}")
+def get_home(property_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+    home = homes.detail(conn, region, property_id)
+    if home is None or home["property"]["zip"] not in region.zip_codes:
+        raise HTTPException(404, "Home not found")
+    return home
+
+
+@app.post("/api/homes/{property_id}/lookup")
+def lookup_home(property_id: int, conn: sqlite3.Connection = Depends(get_conn)):
+    """Fetch this home's property record (past sales, assessments, features) from RentCast."""
+    from .sources.base import SourceUnavailable
+    from .sources.rentcast import lookup_property, parse_record
+
+    home = homes.get_property(conn, property_id)
+    if home is None:
+        raise HTTPException(404, "Home not found")
+    address = ", ".join(x for x in (home["address"], home["city"], f"{region.state} {home['zip'] or ''}".strip()) if x)
+    try:
+        record = lookup_property(address)
+    except SourceUnavailable as exc:
+        raise HTTPException(400, str(exc))
+    except Exception as exc:
+        raise HTTPException(502, f"Lookup failed: {exc}")
+    if record is None:
+        raise HTTPException(404, f"No property record found for {address}")
+    facts, history = parse_record(record)
+    facts.pop("address", None)  # keep the address the home is already filed under
+    with db.transaction(conn):
+        properties.apply_record(conn, property_id, facts, history, "rentcast")
+    return homes.detail(conn, region, property_id)
+
+
+@app.get("/api/sales")
+def get_sales(zip: str | None = None, months: int = Query(24, ge=0, le=600), limit: int = Query(500, le=5000),
+              conn: sqlite3.Connection = Depends(get_conn)):
+    return homes.recent_sales(conn, region, _zip(zip), months, limit)
 
 
 @app.get("/api/zips")

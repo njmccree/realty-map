@@ -3,6 +3,7 @@
     python -m realtymap ingest                 # all free sources (+ RentCast if a key is set)
     python -m realtymap ingest realtor redfin  # selected sources
     python -m realtymap import listings.csv    # listings / past sales from a CSV
+    python -m realtymap lookup "1 Main St, Bay City, MI 48706"   # one home's sale history (RentCast)
     python -m realtymap demo                   # synthetic listings to try the UI
     python -m realtymap clear --source demo
     python -m realtymap serve                  # web UI on http://127.0.0.1:8000
@@ -15,7 +16,7 @@ import os
 import sys
 import time
 
-from . import db, demo
+from . import db, demo, properties
 from .config import load_region
 from .sources import SOURCES, CSVImport, SourceUnavailable, run_source
 from .sources.redfin import Redfin
@@ -61,6 +62,36 @@ def cmd_import(args) -> int:
     return 0
 
 
+def cmd_lookup(args) -> int:
+    from .sources.rentcast import lookup_property, parse_record
+
+    region = load_region(args.region)
+    conn = db.connect()
+    try:
+        record = lookup_property(args.address)
+    except SourceUnavailable as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    if record is None:
+        print(f"no property record found for {args.address!r}", file=sys.stderr)
+        return 1
+    facts, history = parse_record(record)
+    if facts.get("zip") not in region.zip_codes:
+        print(f"note: ZIP {facts.get('zip')} is outside {region.name}; it won't appear in the dashboard")
+    with db.transaction(conn):
+        pid = properties.get_or_create_property(conn, facts)
+        if pid is None:
+            print("the property record has no street address; nothing stored", file=sys.stderr)
+            return 1
+        properties.apply_record(conn, pid, facts, history, "rentcast")
+    sales = [h for h in history if h["event"] == "sold"]
+    print(f"stored home #{pid}: {facts.get('address')} with {len(sales)} sale(s) and "
+          f"{len(history) - len(sales)} assessment(s)")
+    for h in sorted(sales, key=lambda h: h["date"] or ""):
+        print(f"  sold {h['date']}  ${h['price']:,.0f}")
+    return 0
+
+
 def cmd_demo(args) -> int:
     region = load_region(args.region)
     conn = db.connect()
@@ -76,8 +107,9 @@ def cmd_clear(args) -> int:
     with db.transaction(conn):
         a = conn.execute("DELETE FROM listings WHERE source = ?", (args.source,)).rowcount
         b = conn.execute("DELETE FROM market_metrics WHERE source = ?", (args.source,)).rowcount
+        b += properties.delete_source(conn, args.source)
         conn.execute("DELETE FROM ingest_runs WHERE source = ?", (args.source,))
-    print(f"removed {a} listings and {b} metric rows from source {args.source!r}")
+    print(f"removed {a} listings and {b} metric / history rows from source {args.source!r}")
     return 0
 
 
@@ -109,6 +141,10 @@ def main(argv=None) -> int:
     s.add_argument("--source", default="csv", help="name to tag these rows with (default: csv)")
     s.add_argument("--all-zips", action="store_true", help="keep rows outside the region's ZIP list")
     s.set_defaults(func=cmd_import)
+
+    s = sub.add_parser("lookup", help="fetch one home's property record and sale history (RentCast, 1 request)")
+    s.add_argument("address", help='full address, e.g. "1 Main St, Bay City, MI 48706"')
+    s.set_defaults(func=cmd_lookup)
 
     s = sub.add_parser("demo", help="load synthetic listings for trying out the UI")
     s.add_argument("--count", type=int, default=240)
